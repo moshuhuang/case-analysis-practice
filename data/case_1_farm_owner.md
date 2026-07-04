@@ -6,7 +6,6 @@ You are the owner of a farm. The farm grows vegetables and sells them as a bottl
 ## Questions
 
 Q1. What factors will you consider that affect the profitability of this sauce business?
-Think about: Market, Customers, Revenue drivers, and Cost drivers.
 
 Q2. Calculate the annual profit for the sauce business.
 Given the following data:
@@ -23,7 +22,6 @@ Sales:
 - Selling price: $10/bottle
 
 Q3. What are the biggest risks for this business?
-Consider: Financial, Supplier, Competitor, and Customer risks.
 
 Q4. The company wants to increase spiciness by changing the recipe.
 New recipe change:

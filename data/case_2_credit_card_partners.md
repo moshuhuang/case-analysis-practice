@@ -15,7 +15,6 @@ Given:
 - Fraud prevention cost: $5/card/month
 
 Q3. Capital One is now considering co-branding with a ride-share company (e.g., Uber). What additional factors should be considered?
-Think about: product rewards, customer overlap, profitability levers.
 
 Q4. New data is introduced. To maintain the same profit as Q2, how many new customers must be acquired?
 New data:
