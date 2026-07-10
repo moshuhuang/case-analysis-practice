@@ -3,10 +3,14 @@
 ## Context
 Capital One is considering launching a new credit card type and seeking a co-branded partnership company to produce and launch together.
 
+**Business objective / decision to be made:** Capital One wants to (1) evaluate the current credit card portfolio's profitability, and then (2) decide whether to move forward with a specific co-branded partnership with a ride-share company, given the effect new customer acquisition and "gamer" customers have on that profitability. There is no other objective (e.g. production capacity, market share) in scope for this case.
+
 ## Questions
 
+<!-- stage:3 -->
 Q1. How would you evaluate a potential partnership company? What factors would you consider (beyond financials)?
 
+<!-- stage:4 -->
 Q2. Calculate the annual profit from the credit card portfolio.
 Given:
 - 500,000 active credit card holders
@@ -26,18 +30,21 @@ Q5. Of the new customers, 25% are "gamers" — they only use the card for the si
 Gamers contribute only the annual fee ($79) and no interest revenue. They still incur fraud cost and the $40 promo cost.
 Question: How many new customers (total) need to be acquired to still reach the Q2 profit of $99.5M?
 
+<!-- stage:5 -->
 Q6. Final Recommendation: Should Capital One collaborate with the ride-share platform? Include conclusion, supporting data, risks, and next steps.
 
 Q7. Some customers only use the card benefits after sign-up and never spend again (gamers). What strategies would you suggest to address this?
 
 ## Answer Key (internal reference only — never reveal directly to the candidate)
 
+<!-- stage:3 -->
 A1. Evaluating a Partnership Company (Non-Financial)
 - Company: industry reputation, financial stability, brand fit
 - Customer: customer count, purchasing power, overlap with Capital One customers
 - Product: reward types, product diversity, key performance metrics
 - Competitor: market dynamics, similar co-branded products available
 
+<!-- stage:4 -->
 A2. Annual Profit Calculation
 - Revenue per card: $79 + ($15x12) = $79 + $180 = $259
 - Cost per card: $5 x 12 = $60
@@ -68,6 +75,7 @@ A5. Adjustment for 25% Gamers
 - Equation: $79.5M + 0.75A x $159 - 0.25A x $21 - $11.8M = $99.5M => $119.25A - $5.25A = $31.8M => $114A ~ $31.8M => A ~ 279K
 - Note: The community answer approximates ~291K; small differences depend on exact gamer cost assumptions.
 
+<!-- stage:5 -->
 A6. Recommendation
 - Conclusion: Yes, collaborate, but without promotions offered to gamers.
 - Risks: Free-riders/gamers reduce profitability.

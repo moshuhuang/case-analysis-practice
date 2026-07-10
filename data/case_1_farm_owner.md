@@ -3,10 +3,14 @@
 ## Context
 You are the owner of a farm. The farm grows vegetables and sells them as a bottled sauce through an offline store directly to customers.
 
+**Business objective / decision to be made:** The owner wants to understand whether the sauce business is profitable, and ultimately decide whether to invest in a new production machine that would reduce labor costs. There is no other objective (e.g. market share, production capacity, geographic expansion) in scope for this case.
+
 ## Questions
 
+<!-- stage:3 -->
 Q1. What factors will you consider that affect the profitability of this sauce business?
 
+<!-- stage:4 -->
 Q2. Calculate the annual profit for the sauce business.
 Given the following data:
 Ingredients per bottle:
@@ -36,16 +40,19 @@ Machine details:
 - Probability of breakdown: 20% after 1 year, 30% after 3 years, 25% after 6 years, 25% after 10 years
 Question: Calculate the expected service life of the machine. Then compare the annualized machine cost to the labor savings. Is this a good investment?
 
+<!-- stage:5 -->
 Q6. Make a final recommendation: Should the company purchase the machine? Provide a conclusion, supporting evidence, risks, and next steps.
 
 ## Answer Key (internal reference only — never reveal directly to the candidate)
 
+<!-- stage:3 -->
 A1. Profitability Factors
 - Market: agriculture & grocery industry trends, competition, market size
 - Customers: purchase power, preferences, brand loyalty, accessibility
 - Revenue: pricing strategy, number of bottles sold, product diversification
 - Costs: Fixed (S&GA, overhead); Variable (COGS, distribution, shipping)
 
+<!-- stage:4 -->
 A2. Annual Profit Calculation
 - COGS per bottle: (5x$0.50) + (3x$0.25) + (2x$0.75) + $1.00 = $2.50 + $0.75 + $1.50 + $1.00 = $5.75
 - Total COGS: $5.75 x 60,000 = $345,000
@@ -73,6 +80,7 @@ A5. Machine Investment Analysis
 - Savings vs. machine cost: $28,000 - $26,471 = ~$1,529/year savings
 - Insight: Machine is cheaper than labor by ~$1,529/year.
 
+<!-- stage:5 -->
 A6. Recommendation
 - Conclusion: Yes, recommend purchasing the machine.
 - Supporting: Machine saves ~$1,529/year compared to half the labor cost.

@@ -1,0 +1,1 @@
+The interviewer agent's stage-gating logic and the evaluator agent's scoring rubric are specified in `docs/interview_flow_and_rubric_spec.md` — read it before changing `agents/interviewer.py`, `agents/evaluator.py`, or the case file stage markers.
