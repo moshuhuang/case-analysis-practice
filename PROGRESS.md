@@ -2,155 +2,195 @@
 
 Read this together with `PLAN.md` at the start of any new session to pick up where things left
 off. Also read `CLAUDE.md`, which points to `docs/interview_flow_and_rubric_spec.md` — the design
-spec for the interviewer's stage logic and the (not yet built) evaluator's rubric.
+spec for the interviewer's stage logic and the evaluator's rubric.
 
-## Status: Phase 1 stage-gating + 2 rounds of browser-testing bug fixes (5 + 3 bugs) done, not yet
-## re-confirmed by user in the browser. Evaluator (Phase 2) not started.
+## Status
+Phase 1 (interviewer agent) stage-gating + 8 bug fixes are implemented and **committed**
+(`2afd11b`), but **not yet re-tested by the user in the browser** — the user explicitly decided to
+defer that retest and move on to Phase 2 rather than block on it. Phase 2 (evaluator agent) is
+about to start; nothing has been implemented for it yet.
 
-### Done — round 2 (3 more bugs found during the user's second browser test)
-Note: the user re-used the labels "Bug 2/3/4" for this round — these are different bugs from
-round 1's Bug 2-4 below, not the same ones recurring.
-1. **Interviewer looped indefinitely on the same sticking point** instead of moving on like a real
-   interviewer would (max 2-3 redirects, then either advance or fail). Added a "CAP ON REPEATED
-   REDIRECTS" rule to `agents/interviewer.py`'s system prompt: never redirect the same gate more
-   than 3 times in a row; on the 3rd unresolved attempt, soft/qualitative gates (recap, clarifying
-   question specificity, framework shape) get accepted-with-a-noted-gap and advanced anyway, while
-   hard gradable gates (Stage 4 math) rely on the existing Bug-5 same-question fail rule to end the
-   case after a 4th consecutive `incorrect` tag — no infinite loop either way.
-2. **Interviewer was proactively inviting/hinting clarifying questions** (e.g. asking "do you have
-   any clarifying questions?" or naming topics like "scope"/"profitability" before the candidate
-   raised them) — unrealistic, since real candidates have to initiate this themselves. Removed the
-   "invite clarifying questions" instruction from the Stage 1→2 transition; Stage 2 is now
-   explicitly candidate-initiated and optional (skipping straight to a framework is legitimate).
-   Added a general "No leading/hinting" rule covering this everywhere, not just Stage 2.
-3. **Interviewer was proactively supplying the analysis equation/formula** instead of waiting for
-   the candidate to propose it in Stage 3/4. Stage 3 and Stage 4 instructions now explicitly
-   forbid stating or hinting at framework categories or equations - the interviewer only
-   evaluates/confirms/challenges what the candidate proposes on their own.
+---
 
-All three fixes are also reflected in `docs/interview_flow_and_rubric_spec.md` (Stage 1-3 sections
-reworded, new "Cap on repeated redirects" subsection, Part 5 items 3-5 added).
+## Phase 1 — Interviewer agent: bug-fix status (implemented, not yet re-tested)
 
-### Done — round 1 (5 bugs found during the user's first browser test of stage-gating)
-1. **Grounding / hallucinated objective** ("production capacity" was invented for a case that's
-   actually about profitability): both `data/case_1_farm_owner.md` and
-   `data/case_2_credit_card_partners.md` now have an explicit "Business objective / decision to be
-   made" line in `## Context`, naming the real objective and explicitly ruling out unrelated ones.
-   `agents/interviewer.py`'s system prompt also gained a "Grounding" rule under GENERAL RULES:
-   any objective/number/term the interviewer states must be traceable to the case content, never
-   invented.
-2. **Stage 2 forced full topic coverage**: system prompt now treats goal/scope/time-horizon as
-   *example* clarifying-question directions, not a checklist — one reasonable on-topic question is
-   enough to advance to Stage 3. Spec doc (`docs/interview_flow_and_rubric_spec.md` Part 1 Stage 2)
-   updated to match.
-3. **Stage 4 progressive data release replaced with give-it-all-up-front**: the original design
-   (data trickled out only as asked) didn't match how these case files are actually written (each
-   sub-question already bundles its full data block). System prompt now tells the interviewer to
-   give the full data set for a sub-question in the same message as the question; the candidate's
-   job is to state the equation, plug in the given numbers, and narrate the logic — if they skip to
-   a bare final number, the interviewer asks "Can you walk me through how you calculated that?".
-   Spec doc Stage 4 section updated to match.
-4. **Connection instability**: no `.streamlit/config.toml` exists (defaults are in use), so this
-   isn't a Streamlit timeout misconfiguration. Root cause is most likely OS/process-lifecycle (the
-   background streamlit process getting reaped/suspended, e.g. laptop sleep — matches the earlier
-   "Stopping..." log with no exception). Mitigated the part that *is* a code issue: `app.py` now
-   wraps the `client.messages.create()` call in try/except for `APIConnectionError` /
-   `APITimeoutError` / `APIStatusError`, showing a friendly retry message instead of an uncaught
-   crash, and cleanly rolls back the just-appended user turn so retry doesn't duplicate it.
-   Remaining mitigation is environmental, not code — see "Reminders for later" below.
-5. **No fail condition for repeated wrong answers**: the interviewer's hidden tag changed from
-   `[[stage:N]]` to `[[stage:N|answer:STATUS]]`, where STATUS is `correct` / `incorrect` / `na`,
-   grading the candidate's latest message against whichever gate/question is currently active.
-   `agents/interviewer.py`'s `get_interviewer_reply()` now returns `(reply, new_stage,
-   answer_status)`. `app.py` tracks `st.session_state.wrong_streak`, incrementing on `incorrect`
-   and resetting on `correct`; once it exceeds `MAX_WRONG_STREAK = 3` (i.e. a 4th consecutive wrong
-   attempt on the same question), the case ends immediately with a short fail note naming the
-   stage, and the chat input is disabled (`st.session_state.case_over`). Spec doc gained a new
-   "Part 5 — Addenda from Phase 1 browser testing" section documenting both this and the grounding
-   rule.
+All 8 fixes below are in `agents/interviewer.py` (system prompt) and `app.py`, committed in
+`2afd11b`. Reference test plan is at the bottom of this file (Round 1 items 1-5, Round 2 items
+6-8) — hand it to the user next time they sit down to test Phase 1 in the browser.
 
-**None of this round's 5 fixes has been re-tested by the user in the browser yet** — that's the
-next step (see bottom of this file for the test plan to hand the user).
+**Round 1** (5 bugs from the user's first browser test):
+1. **Grounding / hallucinated objective** — interviewer once invented "production capacity" as the
+   goal for a case actually about profitability. Fix: both case files' `## Context` now state an
+   explicit "Business objective / decision to be made" line; interviewer prompt has a "Grounding"
+   rule requiring every objective/number/term to be traceable to the case content.
+2. **Stage 2 forced full topic coverage** — interviewer was requiring goal + scope + time-horizon
+   all to be asked about before advancing. Fix: these are now explicitly "examples, not a
+   checklist" — one reasonable on-topic question is enough to advance.
+3. **Stage 4 progressive data release** — interviewer was trickling data out field-by-field instead
+   of matching how these case files actually present sub-questions (each bundles its full data
+   block already). Fix: interviewer now gives all data for a sub-question in one message, and
+   candidate's job is to narrate the calculation using that data.
+4. **Connection instability** — investigated; no `.streamlit/config.toml` exists, so this isn't a
+   Streamlit timeout misconfig. Root cause is most likely OS/process-lifecycle (background
+   Streamlit process getting reaped/suspended, e.g. laptop sleep) — not something fixable in code.
+   Did fix the part that *is* a code issue: `app.py` now wraps the `client.messages.create()` call
+   in try/except for `APIConnectionError` / `APITimeoutError` / `APIStatusError`, shows a friendly
+   retry message, and rolls back the just-appended turn so retry doesn't duplicate it.
+5. **No fail condition for repeated wrong answers** — interviewer's hidden tag changed from
+   `[[stage:N]]` to `[[stage:N|answer:STATUS]]` (STATUS = `correct`/`incorrect`/`na`), grading the
+   candidate's latest message against whatever gate is active. `app.py` tracks
+   `st.session_state.wrong_streak`; once it exceeds `MAX_WRONG_STREAK = 3` (4th consecutive wrong
+   attempt on the same question), the case ends immediately with a fail note and the chat input
+   locks (`st.session_state.case_over`).
 
-### Done — earlier stage-gating rewrite
-- Original Phase 1 scaffold (Streamlit UI, interviewer agent, case loader) built and passed a
-  5-round self-test on follow-up specificity.
-- Removed "Think about: ..." / "Consider: ..." hint lines from the candidate-facing question
-  text in both case files — they handed the candidate the answer's category framework, which
-  defeated the point of testing structured thinking.
-- **Stage-gating rewrite** (per `docs/interview_flow_and_rubric_spec.md` Part 1 and Part 4):
-  - Case files (`data/case_1_farm_owner.md`, `data/case_2_credit_card_partners.md`) now have
-    `<!-- stage:N -->` markers (N = 3, 4, or 5) in both the Questions and Answer Key sections,
-    grouping content by which interview stage it belongs to. Stages 0-2 (background, recap,
-    clarifying questions) have no case-specific content — they're governed by generic
-    instructions in the interviewer's system prompt.
-  - `agents/case_loader.py`: `load_case()` now returns `context`, `stage_questions` (dict of
-    stage -> text), `stage_answer_key` (dict of stage -> text). New `get_revealed_content()`
-    assembles only the content the interviewer is allowed to know about: content for stage N is
-    included once `current_stage >= N - 1` (one stage ahead of the live gate), so the model has
-    what it needs to transition the moment the candidate clears the current gate, but never
-    further ahead than that.
-  - `agents/interviewer.py`: system prompt rewritten with explicit per-stage behavior rules
-    (recap correction, clarifying-question scope limiting, framework-before-numbers gate,
-    progressive data release + equation-first/assumption-flagging in the quant stage, CSR +
-    pushback in the recommendation stage) plus the three Part 4 cross-cutting judgment
-    principles (materiality / proportionality / justification vs. name-dropping) for candidate
-    detours outside the core framework. The model is required to end every reply with a hidden
-    `[[stage:N]]` tag reporting the stage after that turn; `get_interviewer_reply()` parses and
-    strips it, falling back to no stage change if the tag is missing.
-  - `app.py`: opening message now only shows the case background and asks the candidate to
-    recap — it no longer shows Question 1 upfront. Sidebar only shows the background (not the
-    full question list), matching the "information revealed progressively" design. Shows a
-    "Stage N/5: <label>" indicator.
-- **Self-tested** the stage-gating with a scripted conversation deliberately trying to skip
-  gates (jumping to a clarifying question before recapping, asking for numbers before giving a
-  framework). Both skip attempts were correctly redirected without advancing the stage; correct
-  recaps/frameworks were specifically acknowledged and advanced the stage; Stage 4 also
-  spontaneously did progressive data release (gave only the ingredient data first, asked what
-  else was needed, rather than dumping the whole data block). User has not yet run this
-  themselves in the browser.
+**Round 2** (3 more bugs from the user's second browser test — note the user re-used the labels
+"Bug 2/3/4" for this round; these are different issues from Round 1's Bug 2-4, not recurrences):
+6. **Interviewer looped indefinitely on the same sticking point** instead of moving on like a real
+   interviewer would. Fix: added a "CAP ON REPEATED REDIRECTS" rule — max 3 redirects on the same
+   gate; on the 3rd unresolved attempt, soft/qualitative gates (recap, clarifying-question
+   specificity, framework shape) get accepted-with-a-noted-gap and advanced anyway, while hard
+   gradable gates (Stage 4 math) rely on the Round-1 Bug-5 fail rule to end the case on the 4th
+   consecutive `incorrect` tag.
+7. **Interviewer was proactively inviting/hinting clarifying questions** (asking "do you have any
+   clarifying questions?" or naming topics like "scope" before the candidate raised them). Fix:
+   removed the "invite clarifying questions" instruction after recap; Stage 2 is now explicitly
+   candidate-initiated and optional — skipping straight to a framework is legitimate.
+8. **Interviewer was proactively supplying the analysis equation/formula** instead of waiting for
+   the candidate to propose it. Fix: Stage 3/4 instructions now explicitly forbid stating or
+   hinting at framework categories or equations; interviewer only evaluates what the candidate
+   proposes on their own. Added a general "No leading/hinting" rule covering this everywhere.
 
-### Design decisions worth knowing
-- Two parallel message lists are kept in `st.session_state`: `display_messages` (what's shown
-  in the chat UI, includes the canned opening) and `api_messages` (sent to Claude, starts from
-  the candidate's first real message).
+All three Round 2 fixes are also reflected in `docs/interview_flow_and_rubric_spec.md` (Stage 1-3
+sections reworded, new "Cap on repeated redirects" subsection, Part 5 items 3-5).
+
+---
+
+## Phase 2 — Evaluator agent: about to start, nothing implemented yet
+
+**What's expected** (per `docs/interview_flow_and_rubric_spec.md` Part 2 and Part 4):
+- Score each completed case on the 5 rubric dimensions in Part 2's table (Recap & Objective
+  Alignment, Clarifying Questions, Framework Structure, Quantitative Execution, Recommendation/CSR)
+  — each gets a short score (e.g. 1-4) **plus one concrete, specific comment**. No generic praise
+  ("good job") or generic criticism ("needs work") — every comment must cite something specific the
+  candidate actually said or didn't say.
+- Use Part 4's three judgment principles (materiality / proportionality / justification-vs-namedropping)
+  when the candidate raised points outside the core financial framework — reward material,
+  proportionate, justified detours; don't penalize them just for being outside Financial/Customer/Market.
+- Output format is specified exactly at the end of Part 2 (5 dimension lines + "Top 2 things to
+  improve next time"). Runs once per completed case, not after every turn (cost + realism reasons
+  already agreed on with the user).
+
+**Process the user wants**: propose an implementation approach first (not code) — how the evaluator
+will be triggered, what transcript/data it reads, how scoring will be produced — and get sign-off
+before writing anything. This was in progress when the session was paused to update this file; the
+next session should pick this back up rather than jumping straight to code.
+
+**Open design question worth raising with the user before/while planning**: there is currently no
+clean "interview fully completed" signal in `app.py`. The only session-state flag that marks an
+end-state is `case_over`, which is set exclusively by the *fail* path (Round-1 Bug 5's wrong-streak
+rule). When a candidate finishes normally (gets through Stage 5's recommendation + pushback and the
+interviewer closes warmly), nothing in the code marks that as "done" — `current_stage` just stays
+at 5 and the chat stays open. The evaluator needs a reliable trigger point and a defined transcript
+boundary; that likely means either (a) extending the model's hidden tag to signal "interview
+complete" at the end of Stage 5, or (b) adding an explicit "End interview / Get my feedback" button
+the candidate clicks. Worth deciding this explicitly as part of the Phase 2 plan rather than
+discovering it midway through implementation.
+
+---
+
+## Key files (where things live)
+
+- `docs/interview_flow_and_rubric_spec.md` — **the design spec**, source of truth for both agents.
+  Part 1 = interviewer stage logic (already implemented). Part 2 = evaluator scoring rubric (not
+  yet implemented — this is what Phase 2 builds). Part 3 = state-design notes for the interviewer.
+  Part 4 = judgment principles for off-framework candidate detours (used by both agents). Part 5 =
+  addenda written after Phase 1 browser testing (grounding rule, same-question fail rule, redirect
+  cap, no-hinting rules).
+- `CLAUDE.md` — project-root instruction pointing here: read the spec doc before touching
+  `agents/interviewer.py`, `agents/evaluator.py` (doesn't exist yet), or case file stage markers.
+- `agents/interviewer.py` — the interviewer agent (stage-gating system prompt + `get_interviewer_reply()`).
+- `agents/case_loader.py` — parses `data/case_*.md` into `context` / `stage_questions` /
+  `stage_answer_key`, and `get_revealed_content()` assembles what the interviewer is allowed to see
+  at the current stage.
+- `agents/evaluator.py` — **does not exist yet**; this is what Phase 2 creates.
+- `app.py` — Streamlit UI, holds all session state (`display_messages`, `api_messages`,
+  `current_stage`, `wrong_streak`, `case_over`).
+- `data/case_1_farm_owner.md`, `data/case_2_credit_card_partners.md` — the two case files, with
+  `<!-- stage:N -->` markers (N=3,4,5) splitting Questions and Answer Key content by stage.
+- `PLAN.md` — the original 4-phase roadmap (Phase 1 interviewer, Phase 2 evaluator, Phase 3 browser
+  speech, Phase 3b Deepgram/ElevenLabs demo mode, Phase 4 polish).
+
+---
+
+## Known issues / things to watch for (found while fixing Phase 1 bugs, not yet addressed)
+
+1. **No clean "interview complete" signal for the happy path** — see the Phase 2 open design
+   question above. This is the most important one to resolve before/while building the evaluator.
+2. **Restarting the same case doesn't work from the UI.** `app.py`'s reset logic
+   (`if st.session_state.get("case_title") != case_title`) only fires when the sidebar dropdown
+   value *changes*. If a case ends (either failed via `case_over` or finished normally) and the
+   candidate wants to retry the *same* case, reselecting the same value in the selectbox is a
+   no-op in Streamlit — nothing resets. The `case_over` info message currently says "choose a case
+   from the sidebar (or reselect this one)," but reselecting the same one won't actually work. Needs
+   an explicit "Restart this case" button or similar.
+3. **`max_tokens=800` may be tight for Stage 4 replies now that data is front-loaded.** Since Round
+   1 Bug 3's fix, the interviewer must fit a full data dump + acknowledgment + question in one
+   reply, plus the required `[[stage:N|answer:STATUS]]` tag at the very end. If a reply gets
+   truncated by the token limit, the tag is silently lost, and `get_interviewer_reply()` falls back
+   to "no stage change, answer_status=na" with no visible error — this would look like the
+   interviewer "not making progress" without any indication of why. Worth watching for during
+   Phase 1 retesting, and possibly worth raising `max_tokens` further or adding an explicit warning
+   if the tag is ever missing.
+4. **Stage 4 sub-question progression still isn't tracked with an explicit counter** — this was a
+   deliberate simplicity trade-off from the original Phase 1 build (the model infers sub-question
+   position from conversation history + the stage-4 content block). It's worked fine for the
+   interviewer so far, but it means there's no structured signal (like "sub-question 3 of 4") in
+   the transcript — the evaluator will have to infer sub-question boundaries from conversation text
+   alone when scoring "Quantitative Execution." Worth keeping in mind if evaluation quality on that
+   dimension turns out to be inconsistent.
+5. **Streamlit background process has died unexpectedly at least twice across sessions** (log just
+   showed "Stopping..." twice, no exception — consistent with laptop sleep or the OS reclaiming an
+   unfocused background process). Not a code bug; see Round-1 Bug 4 above for the mitigation that
+   *was* possible (graceful API error handling). If it recurs: `ps aux | grep streamlit` to check,
+   restart with `streamlit run app.py --server.headless true`, or prefix with `caffeinate -is` /
+   run in a foreground terminal tab to rule out sleep as the cause.
+6. **None of the 8 Phase 1 bug fixes have been re-verified by the user in the browser yet** — the
+   user made an explicit call to proceed to Phase 2 first and come back to this. Flagging again
+   here so it isn't lost: if Phase 2 testing surfaces confusing/low-quality interviewer transcripts,
+   that's a signal to circle back and retest Phase 1 before trusting the evaluator's output.
+
+---
+
+## Design decisions worth knowing
+
+- Two parallel message lists live in `st.session_state`: `display_messages` (what's shown in the
+  chat UI, includes the canned opening) and `api_messages` (sent to Claude, starts from the
+  candidate's first real message). The evaluator will most likely want `api_messages` (or
+  `display_messages` minus the opening) as its transcript input.
 - Stage state (`st.session_state.current_stage`, int 0-5) is the source of truth for what case
   content gets built into the system prompt each turn — this is a hard gate (the model literally
   doesn't have stage N+2 content in its context yet), not just an instruction-based gate, for the
   stage-skip risk that matters most (leaking future numeric data).
-- Within stage 4 (which spans several sub-questions, e.g. Q2-Q5), sub-question progression is
-  NOT tracked with a separate counter — same as original Phase 1, it relies on the model reading
-  conversation history + the stage-4 content block. This was a deliberate simplicity trade-off,
-  consistent with previous self-test results showing this works well. The Bug 5 fix's
-  `wrong_streak` counter works around this: it resets on any `answer:correct` tag regardless of
-  whether the stage number changed, so it correctly tracks "same sub-question" even without an
-  explicit sub-question counter.
-- Evaluator agent (Phase 2, per spec Part 2) was deliberately **not** built in this pass — the
-  user asked to split the spec doc's asks into two separate rounds so each could be verified on
-  its own before moving on, consistent with the "confirm before advancing" project rhythm.
+- The `wrong_streak` counter resets on any `answer:correct` tag regardless of whether the stage
+  number changed, so it correctly tracks "same sub-question" even without an explicit sub-question
+  counter (see Known Issue 4 above for the limitation this doesn't cover).
+- Evaluator agent (Phase 2, per spec Part 2) was deliberately **not** built in the Phase 1 passes —
+  the user asked to split the spec doc's asks into separate rounds so each could be verified before
+  moving on. That verification (Phase 1 browser retest) is now explicitly deferred, not skipped.
 
-### Not done yet / blocked
-- **User still needs to try the fixed stage-gated interviewer themselves in the browser and
-  confirm all 5 bug fixes above feel right — not yet confirmed as of this note.** See the test
-  plan below.
-- **Streamlit background process has died unexpectedly at least twice across sessions** (log just
-  showed "Stopping..." twice, no crash/exception each time — consistent with the laptop sleeping
-  or the OS reclaiming an unfocused background process, not a Streamlit config issue; there's no
-  `.streamlit/config.toml` and defaults are in use). If it happens again mid-test: run `ps aux |
-  grep streamlit` to confirm, then restart with `streamlit run app.py --server.headless true`. For
-  a longer-lived session, running it in a normal foreground Terminal tab (not backgrounded) or
-  prefixing with `caffeinate -is` to block sleep while it runs would help confirm/rule out the
-  sleep theory.
-- **All of the stage-gating rewrite + this round's 5 bug fixes are uncommitted.** Run `git status`
-  / `git diff --stat` at the start of the next session — do not commit until the user explicitly
-  asks, per their standing preference, and ideally not until they've confirmed the browser test.
-- Evaluator agent (Phase 2, using `docs/interview_flow_and_rubric_spec.md` Part 2's five-
-  dimension rubric) — separate round, deliberately deferred, not started.
-- Phase 3 (browser speech), Phase 3b (Deepgram/ElevenLabs demo mode), Phase 4 (optional polish)
-  not started.
+---
 
-### Test plan for both rounds of fixes (hand to user)
-Run through one case end-to-end in the browser (http://localhost:8501) and check:
+## Not done yet / blocked
+
+- Phase 1 browser retest — deferred by user's explicit choice (see Status above), not forgotten.
+- Evaluator agent (Phase 2) — about to start; see the Phase 2 section above for expected scope and
+  the open design question to resolve first.
+- Phase 3 (browser speech), Phase 3b (Deepgram/ElevenLabs demo mode), Phase 4 (optional polish) —
+  not started, not blocking anything currently.
+
+---
+
+## Test plan for Phase 1's 8 fixes (hand to user whenever the retest happens)
 
 Round 1:
 1. **Grounding** — the interviewer should never mention a goal/term not in the case text (e.g. no
@@ -182,8 +222,17 @@ Round 2:
    framework categories or the equation/formula itself at any point; it should only react to what
    you propose.
 
-### Reminders for later
+Also worth trying while retesting, tied to Known Issues above: let a case run all the way through
+Stage 5 to a natural close, and separately try to restart a case from the sidebar, to see Known
+Issues 1 and 2 firsthand.
+
+---
+
+## Reminders for later
+
 - Before publishing to GitHub: double check `.env` is never staged (`git status` should never
   show it — it's in `.gitignore`).
 - User already set a monthly spend limit in the Anthropic console; don't need to re-prompt.
 - Demo strategy: no public hosted deployment. Local run + screen recording only.
+- Commit discipline: only commit when the user explicitly asks (confirmed standing preference,
+  followed successfully for the `2afd11b` commit).
