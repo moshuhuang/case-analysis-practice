@@ -8,9 +8,16 @@ DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 
 STAGE_MARKER_RE = re.compile(r"<!--\s*stage:(\d)\s*-->\s*\n")
 
-# Stages that have case-specific question/answer content. Stages 0-2 (background, recap,
-# clarifying questions) are governed by generic interviewer instructions, not case text.
-CONTENT_STAGES = (3, 4, 5)
+# Stages that have case-specific question/answer content, mapped to the current_stage value at
+# which their content becomes visible to the interviewer. Normally this is "one stage ahead" (so
+# the model has what it needs to transition the moment a gate clears), but stage 4 is revealed two
+# stages ahead: a candidate may legally skip stage 2 (clarifying questions, optional) and go
+# straight from stage 2 into giving a framework, which the interviewer must then evaluate and, if
+# it's good, cascade all the way to presenting the first stage-4 question - in the SAME reply,
+# while current_stage is still 2. Without stage 4's content available that early, the model has
+# nothing real to present and will invent data instead.
+REVEAL_THRESHOLD = {3: 2, 4: 2, 5: 4}
+CONTENT_STAGES = tuple(REVEAL_THRESHOLD)
 
 STAGE_LABELS = {
     0: "Background",
@@ -62,14 +69,15 @@ def load_case(path: Path) -> dict:
 def get_revealed_content(case_data: dict, current_stage: int) -> str:
     """Assemble the case content the interviewer is allowed to know about right now.
 
-    Content for a given content-stage is included once `current_stage` reaches one stage
-    before it, so the interviewer already has what it needs to transition smoothly the
-    moment the candidate clears the gate it's currently stuck at.
+    Content for a given content-stage is included once `current_stage` reaches its entry in
+    REVEAL_THRESHOLD, so the interviewer already has what it needs to transition smoothly (and
+    never has to invent data) the moment the candidate clears whatever gate it's currently stuck
+    at - including the legal skip-ahead path where stage 2 is skipped entirely.
     """
     parts = [f"CONTEXT (always visible to the candidate):\n{case_data['context']}"]
 
     for stage in CONTENT_STAGES:
-        if current_stage >= stage - 1:
+        if current_stage >= REVEAL_THRESHOLD[stage]:
             question_block = case_data["stage_questions"].get(stage, "")
             answer_block = case_data["stage_answer_key"].get(stage, "")
             parts.append(
