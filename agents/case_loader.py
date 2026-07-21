@@ -55,12 +55,20 @@ def load_case(path: Path) -> dict:
     context_match = re.search(r"## Context\s*\n(.*?)\n##", full_text, re.S)
     context = context_match.group(1).strip() if context_match else ""
 
+    # Optional: a case file may separate the candidate-visible background (## Context) from an
+    # internal-only ## Objective used solely to ground the interviewer's Stage 1 recap-checking -
+    # never shown to the candidate directly. Cases without this section keep the old behavior
+    # (context alone carries both roles).
+    objective_match = re.search(r"## Objective\s*\n(.*?)\n##", full_text, re.S)
+    objective = objective_match.group(1).strip() if objective_match else ""
+
     questions_section = full_text.split("## Questions", 1)[1].split("## Answer Key", 1)[0]
     answer_key_section = full_text.split("## Answer Key", 1)[1]
 
     return {
         "path": path,
         "context": context,
+        "objective": objective,
         "stage_questions": _split_by_stage(questions_section),
         "stage_answer_key": _split_by_stage(answer_key_section),
     }
@@ -75,6 +83,18 @@ def get_revealed_content(case_data: dict, current_stage: int) -> str:
     at - including the legal skip-ahead path where stage 2 is skipped entirely.
     """
     parts = [f"CONTEXT (always visible to the candidate):\n{case_data['context']}"]
+    if case_data.get("objective"):
+        parts.append(
+            "OBJECTIVE (internal grounding only - the candidate has NOT been told this; use it "
+            "only as a loose sanity check that the candidate's recap is in the right territory, "
+            "not as a checklist to match against - accept any reasonable phrasing of the real "
+            "decision and move on the first time they get the gist right, even if it doesn't "
+            "enumerate every sub-part listed here. If you do redirect because the recap is "
+            "genuinely off-base, never quote, count, or hint at the sub-parts below (e.g. never "
+            "say something like 'what two things would we need to evaluate') - that reveals the "
+            "answer structure. A generic redirect like 'what's the real decision we're trying to "
+            f"make here?' is enough:\n{case_data['objective']}"
+        )
 
     for stage in CONTENT_STAGES:
         if current_stage >= REVEAL_THRESHOLD[stage]:

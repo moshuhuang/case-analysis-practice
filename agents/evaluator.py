@@ -124,6 +124,8 @@ IMPROVE2|specific actionable point
 
 def build_system_prompt(case_data: dict) -> str:
     answer_key_parts = [case_data["context"]]
+    if case_data.get("objective"):
+        answer_key_parts.append(case_data["objective"])
     for stage in (3, 4, 5):
         block = case_data["stage_answer_key"].get(stage, "")
         if block:

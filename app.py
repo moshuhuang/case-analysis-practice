@@ -165,13 +165,13 @@ def render_voice_panel() -> str | None:
         )
         return None
 
-    mic_col, stop_col, cancel_col, status_col = st.columns([1, 1, 1, 3])
+    mic_col, stop_col, cancel_col, status_col = st.columns([1.6, 1.8, 1, 2.5])
     with mic_col:
-        if not st.session_state.listening and st.button("🎤 Record answer"):
+        if not st.session_state.listening and st.button("🎤 Record answer", type="primary"):
             st.session_state.listening = True
             st.rerun()
     with stop_col:
-        if st.session_state.listening and st.button("⏹ Stop & transcribe"):
+        if st.session_state.listening and st.button("⏹ Stop & transcribe", type="primary"):
             send_voice_command("stop")
             time.sleep(0.5)  # let the recognizer finalize + flush its last chunk before we read
             st.session_state.listening = False
@@ -208,7 +208,7 @@ def render_voice_panel() -> str | None:
         )
         send_col, discard_col = st.columns([1, 1])
         with send_col:
-            if st.button("✅ Send voice answer"):
+            if st.button("✅ Send voice answer", type="primary"):
                 submitted = edited
                 st.session_state.voice_draft = ""
         with discard_col:
@@ -219,10 +219,44 @@ def render_voice_panel() -> str | None:
 
 
 st.set_page_config(page_title="Case Analysis Practice", page_icon="🧭")
-st.title("Case Analysis Practice")
-st.caption(
-    "Practice structuring and talking through real business and data case scenarios - the "
-    "interviewer only reveals information as you earn it, just like a real case interview."
+
+st.markdown(
+    """
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&display=swap');
+
+    h1, .case-title-heading {
+        font-family: "Baloo 2", sans-serif !important;
+        font-weight: 800 !important;
+    }
+    .case-title-heading {
+        font-size: 1.75rem;
+        line-height: 1.25;
+        margin: -0.5rem 0 1rem 0;
+    }
+
+    div[data-testid="stButton"] button {
+        border-radius: 999px !important;
+        padding: 0.4rem 0.9rem !important;
+        white-space: nowrap !important;
+        transition: opacity 0.15s ease;
+    }
+    div[data-testid="stButton"] button:hover {
+        opacity: 0.85;
+    }
+    div[data-testid="stButton"] button[kind="primary"] {
+        background-color: #ffffff !important;
+        color: #111111 !important;
+        border: 1.5px solid #ffffff !important;
+    }
+    div[data-testid="stButton"] button[kind="secondary"] {
+        background-color: transparent !important;
+        color: #ffffff !important;
+        border: 1.5px solid #ffffff !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
 )
 
 api_key = os.getenv("ANTHROPIC_API_KEY")
@@ -268,6 +302,13 @@ case_title = st.sidebar.selectbox("Choose a case", list(cases.keys()))
 
 if st.session_state.get("case_title") != case_title:
     start_case(case_title)
+
+st.title("Case Analysis Practice")
+st.markdown(f'<div class="case-title-heading">{case_title}</div>', unsafe_allow_html=True)
+st.caption(
+    "Practice structuring and talking through real business and data case scenarios - the "
+    "interviewer only reveals information as you earn it, just like a real case interview."
+)
 
 if st.sidebar.button("🔄 Restart this case"):
     start_case(case_title)
