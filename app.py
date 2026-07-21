@@ -1,19 +1,37 @@
 import os
 
-import altair as alt
-import pandas as pd
 import streamlit as st
 from anthropic import Anthropic, APIConnectionError, APIStatusError, APITimeoutError
 from dotenv import load_dotenv
 
 from agents.case_loader import STAGE_LABELS, list_cases, load_case
-from agents.evaluator import evaluate_transcript
+from agents.evaluator import PASS_THRESHOLD, evaluate_transcript
 from agents.interviewer import get_interviewer_reply
 
 MAX_WRONG_STREAK = 3  # more than this many consecutive wrong attempts on the same question -> fail
-BAR_COLOR = "#2a78d6"
+
+# One Streamlit built-in color name per dimension, just to visually tell the four rows apart.
+DIMENSION_COLOR_NAMES = {
+    "Structured Thinking": "blue",
+    "Quantitative Analysis": "green",
+    "Communication": "violet",
+    "Business Judgment": "orange",
+}
 
 load_dotenv()
+
+
+def md_safe(text: str) -> str:
+    """Escape literal '$' so Streamlit's markdown renderer doesn't treat a pair of them as a
+    LaTeX math span - case interview content is full of dollar amounts, and two or more '$' in
+    the same message otherwise get silently rendered as garbled math/code instead of plain text."""
+    return text.replace("$", "\\$")
+
+
+def star_rating(score: int, max_score: int = 5) -> str:
+    """Render a 1-5 score as filled/hollow stars, e.g. 3 -> '★★★☆☆'."""
+    score = max(0, min(score, max_score))
+    return "★" * score + "☆" * (max_score - score)
 
 st.set_page_config(page_title="Case Analysis Practice", page_icon="🧭")
 st.title("Case Analysis Practice")
@@ -68,7 +86,7 @@ if st.sidebar.button("🔄 Restart this case"):
 
 st.sidebar.markdown(f"**Stage {st.session_state.current_stage}/5: {STAGE_LABELS[st.session_state.current_stage]}**")
 with st.sidebar.expander("Case background", expanded=True):
-    st.markdown(st.session_state.case_data["context"])
+    st.markdown(md_safe(st.session_state.case_data["context"]))
 st.sidebar.caption(
     "Questions and data are revealed step by step during the interview, just like a real case "
     "interview - they won't be listed here in advance."
@@ -76,7 +94,7 @@ st.sidebar.caption(
 
 for message in st.session_state.display_messages:
     with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+        st.markdown(md_safe(message["content"]))
 
 chat_locked = st.session_state.case_over or st.session_state.interview_complete
 if st.session_state.case_over:
@@ -91,7 +109,7 @@ if user_answer:
     st.session_state.display_messages.append({"role": "user", "content": user_answer})
     st.session_state.api_messages.append({"role": "user", "content": user_answer})
     with st.chat_message("user"):
-        st.markdown(user_answer)
+        st.markdown(md_safe(user_answer))
 
     with st.chat_message("assistant"):
         with st.spinner("Interviewer is thinking..."):
@@ -111,7 +129,7 @@ if user_answer:
                 st.session_state.api_messages.pop()  # let the candidate resubmit cleanly
                 st.session_state.display_messages.pop()
                 st.stop()
-        st.markdown(reply)
+        st.markdown(md_safe(reply))
 
     if answer_status == "incorrect":
         st.session_state.wrong_streak += 1
@@ -151,33 +169,21 @@ if evaluation:
 
     if evaluation["parse_ok"]:
         if evaluation["passed"]:
-            st.success("Overall: PASS - all 4 dimensions scored at least 3/5.")
+            st.success(f"Overall: PASS - all 4 dimensions scored at least {PASS_THRESHOLD}/5.")
         else:
-            st.warning("Overall: NOT A PASS - at least one dimension scored below 3/5.")
-
-        chart_df = pd.DataFrame(
-            {
-                "Dimension": [d["label"] for d in evaluation["dimensions"]],
-                "Score": [d["score"] for d in evaluation["dimensions"]],
-            }
-        )
-        chart = (
-            alt.Chart(chart_df)
-            .mark_bar(cornerRadiusEnd=4, size=22, color=BAR_COLOR)
-            .encode(
-                x=alt.X("Score:Q", scale=alt.Scale(domain=[0, 5]), title="Score (1-5)"),
-                y=alt.Y("Dimension:N", sort=None, title=None),
+            st.warning(
+                f"Overall: NOT A PASS - at least one dimension scored below {PASS_THRESHOLD}/5."
             )
-        )
-        labels = chart.mark_text(align="left", dx=6, color=BAR_COLOR).encode(text="Score:Q")
-        st.altair_chart(chart + labels, use_container_width=True)
 
         for d in evaluation["dimensions"]:
-            st.markdown(f"**{d['label']} — {d['score']}/5**  \n{d['comment']}")
+            color_name = DIMENSION_COLOR_NAMES.get(d["label"], "gray")
+            stars = star_rating(d["score"])
+            st.markdown(f"**{d['label']}** — :{color_name}[{stars}] ({d['score']}/5)")
+            st.markdown(md_safe(d["comment"]))
 
         if evaluation["improvements"]:
             st.markdown("**Top things to improve next time:**")
             for point in evaluation["improvements"]:
-                st.markdown(f"- {point}")
+                st.markdown(f"- {md_safe(point)}")
     else:
-        st.markdown(evaluation["raw_text"])
+        st.markdown(md_safe(evaluation["raw_text"]))
