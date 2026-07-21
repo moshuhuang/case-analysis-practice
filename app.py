@@ -279,8 +279,7 @@ def start_case(title: str) -> None:
     opening_line = (
         f"Hi, I'm your interviewer today. Here's the situation:\n\n"
         f"**{case_data['context']}**\n\n"
-        f"Before we dive in, go ahead and walk me through your understanding of the "
-        f"situation and what we're trying to figure out."
+        f"Any questions?"
     )
 
     st.session_state.case_title = title
