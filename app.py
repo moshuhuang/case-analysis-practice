@@ -150,6 +150,11 @@ if evaluation:
     st.subheader("📊 Your Case Review")
 
     if evaluation["parse_ok"]:
+        if evaluation["passed"]:
+            st.success("Overall: PASS - all 4 dimensions scored at least 3/5.")
+        else:
+            st.warning("Overall: NOT A PASS - at least one dimension scored below 3/5.")
+
         chart_df = pd.DataFrame(
             {
                 "Dimension": [d["label"] for d in evaluation["dimensions"]],
@@ -160,7 +165,7 @@ if evaluation:
             alt.Chart(chart_df)
             .mark_bar(cornerRadiusEnd=4, size=22, color=BAR_COLOR)
             .encode(
-                x=alt.X("Score:Q", scale=alt.Scale(domain=[0, 4]), title="Score (1-4)"),
+                x=alt.X("Score:Q", scale=alt.Scale(domain=[0, 5]), title="Score (1-5)"),
                 y=alt.Y("Dimension:N", sort=None, title=None),
             )
         )
@@ -168,7 +173,7 @@ if evaluation:
         st.altair_chart(chart + labels, use_container_width=True)
 
         for d in evaluation["dimensions"]:
-            st.markdown(f"**{d['label']} — {d['score']}/4**  \n{d['comment']}")
+            st.markdown(f"**{d['label']} — {d['score']}/5**  \n{d['comment']}")
 
         if evaluation["improvements"]:
             st.markdown("**Top things to improve next time:**")
