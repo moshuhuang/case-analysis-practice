@@ -1,22 +1,30 @@
 # 🧠 Case Analysis Practice: A Multi-Agent AI System
 
-A **multi-agent AI system** that acts as a sparring partner for case practice, and more broadly, for
-the kind of open-ended business reasoning that shows up on the job long after the interview is over.
+A little while back I was talking to people already working in the industry, and I kept hearing the
+same thing: if you're going into data analyst or data science work, you can't avoid case practice. The
+problem is, the only real way to practice is finding someone willing to run a mock interview with you.
+So your practice ends up depending entirely on whether you can find people, and whether they have
+time. That gets old fast, chasing coffee chats and hoping someone agrees to mock you.
 
-If you've done business-analyst, product-analyst, or data-analyst work, you've probably lived some
-version of this: someone hands you a vague, half-finished business question, expects you to structure
-it, run the numbers, and defend a recommendation out loud. Sometimes there's an added twist too, like
-an **A/B test** whose result isn't as clean as the dashboard makes it look. Case interviews are really
-just a compressed, adversarial version of that same skill. This project is a tool for practicing it:
-**two AI agents** play the roles of a real interviewer and a real evaluator, so you can run through a
-case, get pushed on your logic in real time, and walk away with a specific, **evidence-based
-scorecard** instead of a vague "good job."
+At some point I just thought, why not build a teacher that can coach me on case skills whenever I
+actually want to practice, instead of whenever someone else happens to be free. That question is
+pretty much the whole reason this project exists.
 
-It started as prep for one company's case-interview pack. It grew into something more general on
-purpose. The **three practice cases** in this repo span a classic profitability case, a partnership
-evaluation, and a ride-share tipping-prompt A/B test, because "can you structure an ambiguous problem
-and reason about a rollout decision from experiment data" is a skill that runs straight from consulting
-case interviews into everyday data-analyst work.
+What I ended up building has two agents working together.
+
+The **interviewer agent** plays the role of a real interviewer, and I mean that literally. Its
+responses went through round after round of me testing it on myself, until its reactions actually
+started to feel like a real interviewer instead of a script. I also read through a lot of real
+consulting interview examples to polish how it talks and pushes back.
+
+The **evaluator agent** does more than hand you a score. What actually matters is that it tells you
+*where* to improve, and it catches things you would never have thought to check yourself, like whether
+you mentioned country expansion margin, or a third-party exclusivity agreement buried somewhere in the
+deal structure. Those are exactly the blind spots a real mock partner would catch, except now you don't
+need one on standby to get that feedback.
+
+If you're into AI agents, case interviews, or just building things that scratch your own itch, I'd
+love to hear what you think.
 
 ## 🎥 Demo
 
