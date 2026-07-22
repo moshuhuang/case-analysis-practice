@@ -118,8 +118,8 @@ the AI-agent design behind practicing it."
 ## 🚀 Running It Locally
 
 ```bash
-git clone https://github.com/moshuhuang/case-analysis-practice.git
-cd case-analysis-practice
+git clone https://github.com/moshuhuang/multi-agent-case-analysis.git
+cd multi-agent-case-analysis
 python3 -m venv .venv
 source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
