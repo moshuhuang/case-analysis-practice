@@ -1,7 +1,7 @@
-# 🧠 Case Analysis Practice
+# 🧠 Case Analysis Practice: A Multi-Agent AI System
 
-An AI-powered sparring partner for case interviews, and more broadly, for the kind of open-ended
-business reasoning that shows up on the job long after the interview is over.
+A **multi-agent AI system** that acts as a sparring partner for case practice, and more broadly, for
+the kind of open-ended business reasoning that shows up on the job long after the interview is over.
 
 If you've done business-analyst, product-analyst, or data-analyst work, you've probably lived some
 version of this: someone hands you a vague, half-finished business question, expects you to structure
