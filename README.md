@@ -26,7 +26,7 @@ need one on standby to get that feedback.
 If you're into AI agents, case interviews, or just building things that scratch your own itch, I'd
 love to hear what you think.
 
-## 🎥 Click Here Watch 2 mins Demo (*^▽^*)
+## 🎥 Click Picture to Watch the 2 mins Demo (*^▽^*)
 
 [![Watch the demo on YouTube](docs/Images/demo-cover.png)](https://youtu.be/7tmW1r0ezLY)
 
